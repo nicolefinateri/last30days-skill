@@ -11,6 +11,7 @@ Options:
     --sources=MODE      Source selection: auto|reddit|x|both (default: auto)
     --quick             Faster research with fewer sources (8-12 each)
     --deep              Comprehensive research with more sources (50-70 Reddit, 40-60 X)
+    --sort-x=MODE       Sort X results: score|likes|engagement|recent (default: score)
     --debug             Enable verbose debug logging
     --store             Persist findings to SQLite database
     --diagnose          Show source availability diagnostics and exit
@@ -1327,6 +1328,13 @@ def main():
         help="Number of days to look back (1-30, default: 30)",
     )
     parser.add_argument(
+        "--sort-x",
+        choices=["score", "likes", "engagement", "recent"],
+        default="score",
+        metavar="MODE",
+        help="Sort order for X results: score (default), likes, engagement, recent",
+    )
+    parser.add_argument(
         "--store",
         action="store_true",
         help="Persist findings to SQLite database (~/.local/share/last30days/research.db)",
@@ -1647,7 +1655,16 @@ def main():
 
     # Sort items
     sorted_reddit = score.sort_items(scored_reddit)
-    sorted_x = score.sort_items(scored_x)
+    # Apply --sort-x mode for X results
+    sort_x_mode = getattr(args, 'sort_x', 'score')
+    if sort_x_mode == "likes":
+        sorted_x = score.sort_x_by_likes(scored_x)
+    elif sort_x_mode == "engagement":
+        sorted_x = score.sort_x_by_engagement(scored_x)
+    elif sort_x_mode == "recent":
+        sorted_x = score.sort_x_by_recent(scored_x)
+    else:
+        sorted_x = score.sort_items(scored_x)
     sorted_youtube = score.sort_items(scored_youtube) if scored_youtube else []
     sorted_tiktok = score.sort_items(scored_tiktok) if scored_tiktok else []
     sorted_ig = score.sort_items(scored_ig) if scored_ig else []

@@ -624,3 +624,39 @@ def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSear
         return (score, date_key, source_priority, text)
 
     return sorted(items, key=sort_key)
+
+
+def sort_x_by_likes(items: List[schema.XItem]) -> List[schema.XItem]:
+    """Sort X items by likes (descending), then date (recent first)."""
+    def sort_key(item):
+        likes = item.engagement.likes if item.engagement and item.engagement.likes else 0
+        date = item.date or "0000-00-00"
+        date_key = -int(date.replace("-", ""))
+        return (-likes, date_key)
+    return sorted(items, key=sort_key)
+
+
+def sort_x_by_engagement(items: List[schema.XItem]) -> List[schema.XItem]:
+    """Sort X items by raw engagement score (descending), then date.
+
+    Uses the full weighted formula: 0.55*likes + 0.25*reposts + 0.15*replies + 0.05*quotes
+    Unlike the overall score (which blends relevance + recency + engagement),
+    this sorts purely by how much interaction a post generated.
+    """
+    def sort_key(item):
+        eng_raw = compute_x_engagement_raw(item.engagement)
+        eng = eng_raw if eng_raw is not None else 0.0
+        date = item.date or "0000-00-00"
+        date_key = -int(date.replace("-", ""))
+        return (-eng, date_key)
+    return sorted(items, key=sort_key)
+
+
+def sort_x_by_recent(items: List[schema.XItem]) -> List[schema.XItem]:
+    """Sort X items by date (most recent first), then likes as tiebreaker."""
+    def sort_key(item):
+        date = item.date or "0000-00-00"
+        date_key = -int(date.replace("-", ""))
+        likes = item.engagement.likes if item.engagement and item.engagement.likes else 0
+        return (date_key, -likes)
+    return sorted(items, key=sort_key)
